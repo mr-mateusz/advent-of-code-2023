@@ -4,12 +4,20 @@ def read_lines(path: str) -> list[str]:
     return [l.strip('\n') for l in data]
 
 
-def recover_numbers_from_lines(data: list[str]) -> list[int]:
-    numbers = []
-    for line in data:
-        digits = [l for l in line if l.isdigit()]
-        numbers.append(int(digits[0] + digits[-1]))
-    return numbers
+def __digits_to_number(digits: list[int | str]) -> int:
+    return int(str(digits[0]) + str(digits[-1]))
+
+
+def digits_to_numbers(lines: list[list[int | str]]) -> list[int]:
+    return [__digits_to_number(line) for line in lines]
+
+
+def __find_digits_in_line(line: str) -> list[int]:
+    return [int(c) for c in line if c.isdigit()]
+
+
+def find_digits(data: list[str]) -> list[list[int]]:
+    return [__find_digits_in_line(line) for line in data]
 
 
 _words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -20,7 +28,7 @@ def word_to_number(word: str, words: list[str] | None = None) -> int:
     return words.index(word)
 
 
-def find_digits(line: str):
+def __find_digits_and_digit_words_in_line(line: str) -> list[int]:
     digits = []
     for start_idx in range(len(line)):
         subword = line[start_idx:]
@@ -34,12 +42,8 @@ def find_digits(line: str):
     return digits
 
 
-def part_2(data: list[str], words: list[str]) -> list[int]:
-    numbers = []
-    for line in data:
-        digits = find_digits(line)
-        numbers.append(int(str(digits[0]) + str(digits[-1])))
-    return numbers
+def find_digits_and_digit_words(data: list[str]) -> list[list[int]]:
+    return [__find_digits_and_digit_words_in_line(line) for line in data]
 
 
 if __name__ == "__main__":
@@ -48,9 +52,11 @@ if __name__ == "__main__":
     data = read_lines(path)
 
     # part 1
-    calibration_numbers = recover_numbers_from_lines(data)
+    data_digits = find_digits(data)
+    calibration_numbers = digits_to_numbers(data_digits)
     print(sum(calibration_numbers))
 
     # part 2
-    calibration_numbers = part_2(data, _words)
+    data_digits = find_digits_and_digit_words(data)
+    calibration_numbers = digits_to_numbers(data_digits)
     print(sum(calibration_numbers))
