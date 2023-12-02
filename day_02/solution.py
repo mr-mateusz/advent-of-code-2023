@@ -17,6 +17,10 @@ class CubesSet:
     green: int = 0
     blue: int = 0
 
+    @property
+    def power(self) -> int:
+        return self.red * self.green * self.blue
+
     @classmethod
     def from_round_str(cls, round_: str) -> Self:
         cubes_str = round_.split(',')
@@ -36,7 +40,6 @@ class Game:
     id_: int
     rounds: list[CubesSet]
 
-
     @classmethod
     def from_game_str(cls, game: str) -> Self:
         game_str, rounds_str = game.split(':')
@@ -45,13 +48,24 @@ class Game:
         game_id = int(game_id)
 
         rounds_str = rounds_str.split(';')
-
         rounds = [CubesSet.from_round_str(round_str) for round_str in rounds_str]
 
         return cls(game_id, rounds)
 
     def is_possible(self, cubes: CubesSet) -> bool:
         return all(round_.is_possible(cubes) for round_ in self.rounds)
+
+    def find_minimum_set(self) -> CubesSet:
+        red = 0
+        green = 0
+        blue = 0
+
+        for round_ in self.rounds:
+            red = max(red, round_.red)
+            green = max(green, round_.green)
+            blue = max(blue, round_.blue)
+
+        return CubesSet(red, green, blue)
 
 
 if __name__ == '__main__':
@@ -67,3 +81,5 @@ if __name__ == '__main__':
     possible_games = [game for game in games if game.is_possible(cubes_total)]
     print(sum(game.id_ for game in possible_games))
 
+    # Part 2
+    print(sum(game.find_minimum_set().power for game in games))
