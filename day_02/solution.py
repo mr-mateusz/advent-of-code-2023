@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Self
 
@@ -18,17 +20,15 @@ class CubesSet:
     @classmethod
     def from_round_str(cls, round_: str) -> Self:
         cubes_str = round_.split(',')
-        print(cubes_str)
         cubes_dct = {}
         for cube_str in cubes_str:
             cube_str = cube_str.strip()
             cnt, color = cube_str.split()
             cubes_dct[color] = int(cnt)
-        print(cubes_dct)
         return cls(**cubes_dct)
 
-def is_possible(other):
-    pass
+    def is_possible(self, other: CubesSet) -> bool:
+        return self.red <= other.red and self.green <= other.green and self.blue <= other.blue
 
 
 @dataclass
@@ -40,30 +40,30 @@ class Game:
     @classmethod
     def from_game_str(cls, game: str) -> Self:
         game_str, rounds_str = game.split(':')
-        print(game_str)
-        print(rounds_str)
 
         _, game_id = game_str.split()
-
-        print(game_id)
+        game_id = int(game_id)
 
         rounds_str = rounds_str.split(';')
-        print(rounds_str)
 
         rounds = [CubesSet.from_round_str(round_str) for round_str in rounds_str]
 
-        print(rounds)
         return cls(game_id, rounds)
+
+    def is_possible(self, cubes: CubesSet) -> bool:
+        return all(round_.is_possible(cubes) for round_ in self.rounds)
 
 
 if __name__ == '__main__':
-    path = 'input2.txt'
+    path = 'input.txt'
 
     games_raw = read_data(path)
 
-    game_str = games_raw[0]
+    games = [Game.from_game_str(game_str) for game_str in games_raw]
 
-    print(game_str)
+    # Part 1
+    cubes_total = CubesSet(12, 13, 14)
 
-    for game_str in games_raw:
-        Game.from_game_str(game_str)
+    possible_games = [game for game in games if game.is_possible(cubes_total)]
+    print(sum(game.id_ for game in possible_games))
+
