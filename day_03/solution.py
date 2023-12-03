@@ -1,4 +1,5 @@
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable
+from typing import NamedTuple, Self
 
 
 def read(path: str) -> list[str]:
@@ -72,7 +73,9 @@ def find_part_numbers_in_line(prev_line_symbol_indices: set[int],
     return found_part_numbers
 
 
-def find_part_numbers_sum(lines_iter: Iterator[str]) -> int:
+def find_part_numbers_sum(lines_iter: Iterable[str]) -> int:
+    lines_iter = iter(lines_iter)
+
     # Initialize variables for the first line
     prev_line_symbol_indices = set()
     curr_line_numbers, curr_line_symbol_indices = [], set()
@@ -104,9 +107,111 @@ def find_part_numbers_sum(lines_iter: Iterator[str]) -> int:
     return total_sum
 
 
+# Ok, first part was overcomplicated (additional challenge was to iterate over every row only once),
+# so now let's do it the easy way
+
+def to_number(digits: list[str]) -> int:
+    return int(''.join(digits))
+
+
+class Position(NamedTuple):
+    x: int
+    y: int
+
+
+class NumberPosition(NamedTuple):
+    value: int
+    positions: tuple[Position, ...]
+
+    @classmethod
+    def from_lists(cls, digits: list[str], positions: list[Position]) -> Self:
+        return cls(to_number(digits), tuple(positions))
+
+
+def maximum_distance(pos1: Position, pos2: Position) -> int:
+    """
+    https://en.wikipedia.org/wiki/Chebyshev_distance
+
+    >>> maximum_distance(Position(1,1), Position(1,1))
+    0
+    >>> maximum_distance(Position(1,1), Position(1,2))
+    1
+    >>> maximum_distance(Position(1,1), Position(2,2))
+    1
+    >>> maximum_distance(Position(1,1), Position(2,3))
+    2
+    """
+    return max(abs(pos1.x - pos2.x), abs(pos1.y - pos2.y))
+
+
+def is_adjacent(num: NumberPosition, pos: Position) -> bool:
+    """
+    >>> is_adjacent(NumberPosition(467, (Position(0, 0), Position(0, 1), Position(0, 2))), Position(0,3))
+    True
+    >>> is_adjacent(NumberPosition(467, (Position(0, 0), Position(0, 1), Position(0, 2))), Position(0,4))
+    False
+    >>> is_adjacent(NumberPosition(467, (Position(0, 0), Position(0, 1), Position(0, 2))), Position(1,1))
+    True
+    >>> is_adjacent(NumberPosition(467, (Position(0, 0), Position(0, 1), Position(0, 2))), Position(1,3))
+    True
+    >>> is_adjacent(NumberPosition(467, (Position(0, 0), Position(0, 1), Position(0, 2))), Position(1,4))
+    False
+    """
+    return min(maximum_distance(num_pos, pos) for num_pos in num.positions) == 1
+
+
+def symbol_positions_iter(data: list[list], symbol: str = '*') -> Iterable[Position]:
+    positions = []
+    for row_idx, row in enumerate(data):
+        for col_idx, char in enumerate(row):
+            if char == symbol:
+                yield Position(row_idx, col_idx)
+
+
+def find_numbers(data: list[str]) -> list[NumberPosition]:
+    positions = []
+    for row_idx, row in enumerate(data):
+        current_number_indices = []
+        current_number_digits = []
+        for col_idx, char in enumerate(row):
+            if char.isdigit():
+                current_number_indices.append(Position(row_idx, col_idx))
+                current_number_digits.append(char)
+            else:
+                if current_number_indices:
+                    positions.append(NumberPosition.from_lists(current_number_digits, current_number_indices))
+                    current_number_indices = []
+                    current_number_digits = []
+
+        if current_number_indices:
+            positions.append(NumberPosition.from_lists(current_number_digits, current_number_indices))
+
+    return positions
+
+
+def find_gear_ratios_sum(data: list[str]) -> int:
+    numbers = find_numbers(data)
+
+    gear_rations_sum = 0
+    for symbol_position in symbol_positions_iter(data):
+        found_adjacent_numbers = []
+        for number in numbers:
+            if is_adjacent(number, symbol_position):
+                found_adjacent_numbers.append(number)
+
+                if len(found_adjacent_numbers) == 2:
+                    gear_rations_sum += found_adjacent_numbers[0].value * found_adjacent_numbers[1].value
+                    break
+    return gear_rations_sum
+
+
 if __name__ == '__main__':
     path = 'input.txt'
 
     # Part 1
     gen = read_gen(path)
     print(find_part_numbers_sum(gen))
+
+    # Part 2
+    data = read(path)
+    print(find_gear_ratios_sum(data))
