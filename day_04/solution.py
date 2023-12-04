@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Self
 
 
@@ -47,16 +47,50 @@ class Card:
 
     @property
     def value(self) -> int:
-        overlapping_cnt = len(self.winning_numbers & self.actual_numbers)
+        overlapping_cnt = self.matched_cnt
 
         if overlapping_cnt == 0:
             return 0
 
         return 2 ** (overlapping_cnt - 1)
 
+    @property
+    def matched_cnt(self) -> int:
+        return len(self.winning_numbers & self.actual_numbers)
+
 
 def total_value(data: Iterable[str]) -> int:
     return sum(Card.from_str(line).value for line in data)
+
+
+# Part 2
+
+@dataclass
+class PileOfCards:
+    cards: list[Card]
+    copies_counts: list[int] = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.copies_counts = [1] * len(self.cards)
+
+    def process(self) -> None:
+        for index, card in enumerate(self.cards):
+            card_copies = self.copies_counts[index]
+            copies_won = card.matched_cnt
+
+            for index_to_copy in range(index + 1, index + 1 + copies_won):
+                self.copies_counts[index_to_copy] += card_copies
+
+    def __len__(self) -> int:
+        return sum(self.copies_counts)
+
+    def __str__(self):
+        str_ = ''
+        str_ += 'Pile of cards:\n'
+        for cnt, card in zip(self.copies_counts, self.cards):
+            str_ += f'{cnt}, {card}\n'
+
+        return str_
 
 
 if __name__ == '__main__':
@@ -67,3 +101,11 @@ if __name__ == '__main__':
 
     # Part 1
     print(total_value(data))
+
+    # Part 2
+    cards = [Card.from_str(line) for line in data]
+    pile_of_cards = PileOfCards(cards)
+
+    pile_of_cards.process()
+
+    print(len(pile_of_cards))
