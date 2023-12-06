@@ -1,4 +1,6 @@
+import copy
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Self
 
 
@@ -17,6 +19,14 @@ class MapRange:
     source_start: int
     destination_start: int
     len_: int
+
+    @cached_property
+    def source_end(self) -> int:
+        return self.source_start + self.len_ - 1
+
+    @cached_property
+    def destination_end(self) -> int:
+        return self.destination_start + self.len_ - 1
 
     @classmethod
     def from_str(cls, s: str) -> Self:
@@ -43,6 +53,8 @@ class Map:
 
         ranges = [MapRange.from_str(line) for line in data[1:]]
 
+        ranges = list(sorted(ranges, key=lambda x: x.source_start))
+
         return cls(fl[0], fl[2], ranges)
 
     def __getitem__(self, key: int) -> int:
@@ -52,6 +64,43 @@ class Map:
             except KeyError:
                 pass
         return key
+
+    def map_ranges(self, ranges_to_map: list[list[int, int]]) -> list[list[int, int]]:
+        ranges_to_map = copy.deepcopy(ranges_to_map)
+
+        mapped = []
+
+        for rtm in ranges_to_map:
+            for mapping_range in self.ranges:
+                #                   [mapping range]
+                # [range to map]
+                if rtm[1] < mapping_range.source_start:
+                    mapped.append(rtm[:])
+                    rtm = None
+                    break
+                #          [mapping range]
+                # [range to map ...
+                if rtm[0] < mapping_range.source_start:
+                    mapped.append([rtm[0], mapping_range.source_start - 1])
+                    rtm[0] = mapping_range.source_start
+                # [   mapping range     ]
+                # [ ...[range to map]
+                if rtm[1] <= mapping_range.source_end:
+                    mapped.append([mapping_range[rtm[0]], mapping_range[rtm[1]]])
+                    rtm = None
+                    break
+                # [ mapping range]
+                # [ ...[range to map]
+                if rtm[0] <= mapping_range.source_end:
+                    mapped.append([mapping_range[rtm[0]], mapping_range[mapping_range.source_end]])
+                    rtm[0] = mapping_range.source_end + 1
+
+            # [last mapping range]
+            #                      [range to map]
+            if rtm:
+                mapped.append(rtm[:])
+
+        return mapped
 
 
 @dataclass(frozen=True)
@@ -81,6 +130,47 @@ class Almanac:
             key = map_[key]
         return key
 
+    def map_ranges(self, ranges: list[tuple[int, int]]) -> list[list[int, int]]:
+        i = 1
+        for map_ in self.maps:
+            print(f'Mapping {i}. {map_.from_} -> {map_.to}')
+            i += 1
+            ranges = sorted(ranges, key=lambda x: x[0])
+            print(len(ranges), ranges)
+            ranges = merge_ranges(ranges)
+            print(len(ranges), ranges)
+            ranges = map_.map_ranges(ranges)
+
+        print('After Mapping')
+        ranges = sorted(ranges, key=lambda x: x[0])
+        print(len(ranges), ranges)
+        ranges = merge_ranges(ranges)
+        print(len(ranges), ranges)
+        return ranges
+
+
+def merge_ranges(ranges: list[list[int, int]]) -> list[list[int, int]]:
+    """
+    >>> merge_ranges([[10, 20], [21, 30]])
+    [[10, 30]]
+    >>> merge_ranges([[10, 19], [21, 30]])
+    [[10, 19], [21, 30]]
+    >>> merge_ranges([[10, 19], [21, 30], [31, 40], [41, 41], [42, 43], [45, 50]])
+    [[10, 19], [21, 43], [45, 50]]
+    """
+    if not ranges:
+        return ranges
+
+    merged = [ranges[0][:]]
+
+    for range_ in ranges[1:]:
+        if merged[-1][1] + 1 == range_[0]:
+            merged[-1][1] = range_[1]
+        else:
+            merged.append(range_[:])
+
+    return merged
+
 
 if __name__ == '__main__':
     path = 'input.txt'
@@ -91,3 +181,14 @@ if __name__ == '__main__':
     seed_numbers = extract_seed_numbers(data[0])
     almanac = Almanac.from_raw(data[2:])
     print(min(almanac[sn] for sn in seed_numbers))
+
+    # Part 2
+    print(seed_numbers)
+    seed_ranges = [seed_numbers[i: i + 2] for i in range(0, len(seed_numbers), 2)]
+    print(seed_ranges)
+
+    seed_ranges = [[r[0], r[0] + r[1] - 1] for r in seed_ranges]
+
+    result_ranges = almanac.map_ranges(seed_ranges)
+
+    print(result_ranges[0][0])
