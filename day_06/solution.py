@@ -36,6 +36,7 @@ def num_winning_strategies(race: dict) -> int:
         dist = calc_distance(strategy_time, race['time'])
         if dist > race['best_distance']:
             winning_strategies += 1
+            # todo - optimisation - divide/multiply by 2 in every step in order to find threshold
             strategy_time -= 1
         else:
             worse_strategy = True
@@ -51,12 +52,25 @@ def num_winning_strategies(race: dict) -> int:
     return winning_strategies
 
 
+# Part 2
+
+def parse_one_race(data: list[str]) -> dict:
+    time = int(''.join(data[0].split(':')[1].split()))
+    distance = int(''.join(data[1].split(':')[1].split()))
+
+    return {'time': time, 'best_distance': distance}
+
+
 if __name__ == '__main__':
     path = 'input.txt'
 
     data = read(path)
-    data = parse(data)
+    races = parse(data)
 
     # Part 1
-    res = functools.reduce(operator.mul, (num_winning_strategies(race) for race in data))
+    res = functools.reduce(operator.mul, (num_winning_strategies(race) for race in races))
     print(res)
+
+    # Part 2
+    race = parse_one_race(data)
+    print(num_winning_strategies(race))
