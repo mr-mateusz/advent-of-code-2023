@@ -130,22 +130,14 @@ class Almanac:
             key = map_[key]
         return key
 
-    def map_ranges(self, ranges: list[tuple[int, int]]) -> list[list[int, int]]:
-        i = 1
+    def map_ranges(self, ranges: list[list[int, int]]) -> list[list[int, int]]:
         for map_ in self.maps:
-            print(f'Mapping {i}. {map_.from_} -> {map_.to}')
-            i += 1
             ranges = sorted(ranges, key=lambda x: x[0])
-            print(len(ranges), ranges)
             ranges = merge_ranges(ranges)
-            print(len(ranges), ranges)
             ranges = map_.map_ranges(ranges)
 
-        print('After Mapping')
         ranges = sorted(ranges, key=lambda x: x[0])
-        print(len(ranges), ranges)
         ranges = merge_ranges(ranges)
-        print(len(ranges), ranges)
         return ranges
 
 
@@ -183,9 +175,7 @@ if __name__ == '__main__':
     print(min(almanac[sn] for sn in seed_numbers))
 
     # Part 2
-    print(seed_numbers)
     seed_ranges = [seed_numbers[i: i + 2] for i in range(0, len(seed_numbers), 2)]
-    print(seed_ranges)
 
     seed_ranges = [[r[0], r[0] + r[1] - 1] for r in seed_ranges]
 
