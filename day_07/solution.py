@@ -10,7 +10,7 @@ def read(path: str) -> list[str]:
     return [l.strip('\n') for l in data]
 
 
-__rank2val = {
+_rank2val = {
     'A': 14,
     'K': 13,
     'Q': 12,
@@ -21,7 +21,7 @@ __rank2val = {
 
 def rank2val(rank: str) -> int:
     try:
-        return __rank2val[rank]
+        return _rank2val[rank]
     except KeyError:
         return int(rank)
 
@@ -57,6 +57,28 @@ class Hand:
         return self.type == other.type and self.values == other.values
 
 
+class HandWithJoker(Hand):
+
+    @cached_property
+    def type(self) -> tuple:
+        other_cards = [c for c in self.cards if c != 'J']
+        jokers_cnt = len(self.cards) - len(other_cards)
+
+        # Only jokers in the hand
+        if jokers_cnt == 5:
+            return (5,)
+
+        counts = [count for _, count in Counter(other_cards).most_common()]
+        counts[0] += jokers_cnt
+        return tuple(counts)
+
+    @cached_property
+    def values(self) -> tuple:
+        vals = super().values
+        # Correct Jokers
+        return tuple(v if v != _rank2val['J'] else 1 for v in vals)
+
+
 if __name__ == '__main__':
     path = 'input.txt'
 
@@ -65,3 +87,8 @@ if __name__ == '__main__':
 
     # Part 1
     print(sum(index * hand.bid for index, hand in enumerate(sorted(hands), 1)))
+
+    # Part 2
+    hands_jokers = [HandWithJoker.from_str(line) for line in data]
+
+    print(sum(index * hand.bid for index, hand in enumerate(sorted(hands_jokers), 1)))
