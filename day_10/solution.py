@@ -1,7 +1,11 @@
 from enum import Enum
 from typing import Self, NamedTuple
 
-Position = tuple[int, int]
+
+class Position(NamedTuple):
+    x: int
+    y: int
+
 
 class Direction(Enum):
     NORTH = (-1, 0)
@@ -31,6 +35,11 @@ pipe_connections = {
 }
 
 
+class PositionVisit(NamedTuple):
+    position: Position
+    coming_from: Direction
+
+
 def read(path: str) -> list[str]:
     with open(path, 'r', encoding='utf-8') as f:
         data = f.readlines()
@@ -38,66 +47,75 @@ def read(path: str) -> list[str]:
 
 
 def find_start(data: list[list[str]], start_char: str = 'S') -> Position:
+    """
+    Find starting position.
+    """
     for row_idx, row in enumerate(data):
         for col_idx, val in enumerate(row):
             if val == start_char:
-                return row_idx, col_idx
+                return Position(row_idx, col_idx)
 
 
 def step(position: Position, direction: Direction) -> Position:
     """
-    Take a step in a given direction
+    Take a step in a given direction.
     """
-    return tuple(p + d for p, d in zip(position, direction.value))
+    return Position(*[p + d for p, d in zip(position, direction.value)])
 
 
-def find_connected(data: list[list[str]], position: Position) -> list[tuple[Position, Direction]]:
+def find_connected(data: list[list[str]], position: Position) -> list[PositionVisit]:
+    """
+    Find position of pipes connected to the given position.
+    """
     found = []
-
     for direction in Direction:
         pos = step(position, direction)
         pipe = data[pos[0]][pos[1]]
+        # It means the pipe is connected in the direction we came from
+        # Opposite -> we went NORTH, so it means we came from SOUTH
         if direction.opposite in pipe_connections.get(pipe, set()):
-            found.append((pos, direction.opposite))
-
-    # [(position, coming_from)]
+            found.append(PositionVisit(pos, direction.opposite))
     return found
 
 
-def next_position(data: list[list[str]],
-                  position: tuple[tuple[int, int], Direction]) -> tuple[tuple[int, int], Direction]:
+def next_position(data: list[list[str]], position: PositionVisit) -> PositionVisit:
+    """
+    Move to the next position.
+    (we know where we came from, so we can find out next position based on the type of the pipe)
+    """
     position, coming_from = position
 
     pipe = data[position[0]][position[1]]
     another_direction = list(pipe_connections[pipe] - {coming_from})[0]
 
-    return step(position, another_direction), another_direction.opposite
+    return PositionVisit(step(position, another_direction), another_direction.opposite)
 
 
 def find_farthest_point_dist(data: list[list[str]]) -> int:
     starting_pos = find_start(data)
-
     position_distances = {}
-
     steps = 1
 
-    # position, direction_from
+    # We are going both ways simultaneously
     position_1, position_2 = find_connected(data, starting_pos)
 
-    position_distances[position_1[0]] = steps
-    position_distances[position_2[0]] = steps
+    # Log number of steps it takes to reach given positions
+    position_distances[position_1.position] = steps
+    position_distances[position_2.position] = steps
 
     while True:
+        # Go one step further in each way
         next_position_1 = next_position(data, position_1)
         next_position_2 = next_position(data, position_2)
 
-        if next_position_1[0] in position_distances and next_position_2[0] in position_distances:
+        # Check if the whole pipe loop was already traversed
+        if next_position_1.position in position_distances and next_position_2.position in position_distances:
             return max(position_distances.values())
 
         steps += 1
 
-        position_distances[next_position_1[0]] = steps
-        position_distances[next_position_2[0]] = steps
+        position_distances[next_position_1.position] = steps
+        position_distances[next_position_2.position] = steps
 
         position_1 = next_position_1
         position_2 = next_position_2
@@ -107,7 +125,7 @@ if __name__ == '__main__':
     path = 'input.txt'
 
     data = read(path)
-
     data = [list(l) for l in data]
 
+    # Part 1
     print(find_farthest_point_dist(data))
