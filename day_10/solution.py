@@ -91,13 +91,22 @@ def next_position(data: list[list[str]], position: PositionVisit) -> PositionVis
     return PositionVisit(step(position, another_direction), another_direction.opposite)
 
 
-def find_farthest_point_dist(data: list[list[str]]) -> int:
+def find_pipe_pos_with_dists(data: list[list[str]]) -> dict[Position, int]:
     starting_pos = find_start(data)
     position_distances = {}
     steps = 1
 
+    position_distances[starting_pos] = 0
+
     # We are going both ways simultaneously
     position_1, position_2 = find_connected(data, starting_pos)
+
+    # Replace S in data with actual Pipe ;)
+    # (If needed, its position can be found in the positions_distances dict -> the only position with distance 0)
+    starting_pipe_directions = {position_1.coming_from.opposite, position_2.coming_from.opposite}
+    for pipe_shape, directions in pipe_connections.items():
+        if directions == starting_pipe_directions:
+            data[starting_pos[0]][starting_pos[1]] = pipe_shape
 
     # Log number of steps it takes to reach given positions
     position_distances[position_1.position] = steps
@@ -110,7 +119,7 @@ def find_farthest_point_dist(data: list[list[str]]) -> int:
 
         # Check if the whole pipe loop was already traversed
         if next_position_1.position in position_distances and next_position_2.position in position_distances:
-            return max(position_distances.values())
+            return position_distances
 
         steps += 1
 
@@ -121,6 +130,30 @@ def find_farthest_point_dist(data: list[list[str]]) -> int:
         position_2 = next_position_2
 
 
+def process_line(line: list[str], row_index: int, pipe_positions: set[Position]) -> int:
+    """
+    Each occurrence of SOUTH direction 'opens' or 'closes' intervals which means 'inside' or 'outside' pipe loop.
+    """
+    found_inside = 0
+    is_inside = False
+    for col_idx, pipe in enumerate(line):
+        position = Position(row_index, col_idx)
+        if position in pipe_positions:
+            if Direction.SOUTH in pipe_connections[pipe]:
+                is_inside = not is_inside
+        else:
+            if is_inside:
+                found_inside += 1
+    return found_inside
+
+
+def find_area(data: list[list[str]], pipe_positions: set[Position]) -> int:
+    total = 0
+    for line_index, line in enumerate(data):
+        total += process_line(line, line_index, pipe_positions)
+    return total
+
+
 if __name__ == '__main__':
     path = 'input.txt'
 
@@ -128,4 +161,9 @@ if __name__ == '__main__':
     data = [list(l) for l in data]
 
     # Part 1
-    print(find_farthest_point_dist(data))
+    pipe_dists = find_pipe_pos_with_dists(data)
+    print(max(pipe_dists.values()))
+
+    # Part 2
+    pipe_positions = set(pipe_dists.keys())
+    print(find_area(data, pipe_positions))
