@@ -49,20 +49,23 @@ def count_numbers(numbers: list[int], range_: tuple[int, int]) -> int:
 
 
 def galaxies_dist(galaxy1: tuple[int, int], galaxy2: tuple[int, int], expanded_rows: list[int],
-                  expanded_cols: list[int]) -> int:
+                  expanded_cols: list[int], expand_factor: int) -> int:
     dist = manhattan_dist(galaxy1, galaxy2)
 
     rows_correction = count_numbers(expanded_rows, (galaxy1[0], galaxy2[0]))
+    rows_correction = rows_correction * expand_factor - rows_correction
     cols_correction = count_numbers(expanded_cols, (galaxy1[1], galaxy2[1]))
+    cols_correction = cols_correction * expand_factor - cols_correction
 
     return dist + rows_correction + cols_correction
 
 
-def galaxies_dists_sum(galaxies: tuple[int, int], expanded_rows: list[int], expanded_cols: list[int]) -> int:
+def galaxies_dists_sum(galaxies: tuple[int, int], expanded_rows: list[int], expanded_cols: list[int],
+                       expand_factor: int) -> int:
     total = 0
     for index, g1 in enumerate(galaxies):
         for g2 in galaxies[index + 1:]:
-            total += galaxies_dist(g1, g2, expanded_rows, expanded_cols)
+            total += galaxies_dist(g1, g2, expanded_rows, expanded_cols, expand_factor)
     return total
 
 
@@ -76,4 +79,9 @@ if __name__ == '__main__':
     galaxies = find_galaxies(data)
 
     # Part 1
-    print(galaxies_dists_sum(galaxies, rows_without_galaxies, cols_without_galaxies))
+    expand_factor = 2
+    print(galaxies_dists_sum(galaxies, rows_without_galaxies, cols_without_galaxies, expand_factor))
+
+    # Part 2
+    expand_factor = 1_000_000
+    print(galaxies_dists_sum(galaxies, rows_without_galaxies, cols_without_galaxies, expand_factor))
