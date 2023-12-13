@@ -6,7 +6,7 @@ def read(path: str) -> list[str]:
 
 def split_examples(data: list[str]) -> list[list[str]]:
     """
-    Split input data (list of str) into list of examples (each example is a list of str)
+    Split input data (list of str) into list of examples (each example is a list of str).
     """
     c = []
     examples = []
@@ -61,7 +61,7 @@ def find_split_indices(data: list[str]) -> tuple[int, int] | None:
 
 def transpose[T: (list[list], list[str])](data: T) -> T:
     """
-    Transpose matrix
+    Transpose matrix.
     """
     transposed = []
 
@@ -78,7 +78,7 @@ def transpose[T: (list[list], list[str])](data: T) -> T:
 
 def pattern_value(data: list[str], row_multiplier: int, col_multiplier: int) -> int:
     """
-    Calculate pattern value for the example
+    Calculate pattern value for the example.
     """
 
     # row
@@ -140,13 +140,13 @@ def find_split_indices_smudge(data: list[str]) -> tuple[int, int] | None:
 
 def pattern_value_when_1_smudge(data: list[str], row_multiplier: int, col_multiplier: int) -> int:
     """
-    Calculate pattern value for the example when mirror has exacly one smudge.
+    Calculate pattern value for the example when mirror has exactly one smudge.
     """
 
-    # row
+    # rows
     split_indices = find_split_indices_smudge(data)
     if split_indices:
-        # We have to add 1, because rows/columns ale indexed from 1 in the example
+        # We have to add 1, because rows/columns are indexed from 1 in the example
         return row_multiplier * (split_indices[0] + 1)
 
     # columns
