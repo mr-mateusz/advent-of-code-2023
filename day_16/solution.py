@@ -160,3 +160,24 @@ if __name__ == '__main__':
     contraption.simulate()
 
     print(len(contraption.energized_tiles()))
+
+    # Part 2
+    height = len(data)
+    width = len(data[0])
+    starting_rays = []
+    for col_idx in range(width):
+        starting_rays.append((0, col_idx, Direction.SOUTH))
+        starting_rays.append((height - 1, col_idx, Direction.NORTH))
+    for row_idx in range(height):
+        starting_rays.append((row_idx, 0, Direction.EAST))
+        starting_rays.append((row_idx, width - 1, Direction.WEST))
+
+    best = (None, 0)
+    for sr in starting_rays:
+        contraption = Contraption.from_map(data)
+        contraption.add_ray(sr)
+        contraption.simulate()
+        etn = len(contraption.energized_tiles())
+        if etn > best[1]:
+            best = (sr, etn)
+    print(best[1])
