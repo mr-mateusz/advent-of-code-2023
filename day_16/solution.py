@@ -25,7 +25,7 @@ class Contraption:
     width: int
     height: int
 
-    special_tiles: dict[str, tuple[int, int]]
+    special_tiles: dict[str, set[tuple[int, int]]]
 
     rays: list[tuple[int, int, Direction]]
     visited_positions: set[tuple[int, int, Direction]]
