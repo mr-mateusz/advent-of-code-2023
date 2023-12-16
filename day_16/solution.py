@@ -16,9 +16,14 @@ class Direction(Enum):
     EAST = (0, 1)
 
 
-def move(ray: tuple[int, int, Direction]) -> tuple[int, int, Direction]:  # todo - object type on position
-    return ray[0] + ray[2].value[0], ray[1] + ray[2].value[1], ray[2]
+def move(ray: tuple[int, int, Direction], tile: str) -> tuple[int, int, Direction]:
+    if tile == '.':
+        return ray[0] + ray[2].value[0], ray[1] + ray[2].value[1], ray[2]
+    elif tile == '\\':
+        # only for test -> implement correctly
+        return ray[0] + ray[2].value[0], ray[1] + ray[2].value[1], ray[2]
 
+    raise NotImplementedError()
 
 @dataclass
 class Contraption:
@@ -75,16 +80,16 @@ class Contraption:
         for ray in self.rays:
             tile = self.get_tile(ray)
             print(f'Moving: {ray}, which is on tile: {tile}')
-            ray_moved = move(ray)
+            ray_moved = move(ray, tile)
             print(f'After move: {ray_moved}')
             # If the ray has left the contraption we don't track it anymore
             if not self.is_inside(ray_moved):
-                print(f'Left contraption: {ray_moved}')  # debug
+                print(f'*Left contraption: {ray_moved}')  # debug
                 continue
             # This position is already visited by ray which came from the same direction
             # there is no need to track it anymore, because it will repeat path of the previous ray
             if ray_moved in self.visited_positions:
-                print(f'Position visited: {ray_moved}')
+                print(f'*Position already visited: {ray_moved}')
                 continue
             rays_after_step.append(ray_moved)
 
