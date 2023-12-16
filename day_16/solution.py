@@ -9,12 +9,6 @@ def read(path: str) -> list[str]:
     return [l.strip('\n') for l in data]
 
 
-# Mirror 
-# Mirror back
-# Splitter horizontal
-# Splitter vertical
-
-
 class Direction(Enum):
     NORTH = (-1, 0)
     SOUTH = (1, 0)
@@ -30,6 +24,9 @@ def move(ray: tuple[int, int, Direction]) -> tuple[int, int, Direction]:  # todo
 class Contraption:
     width: int
     height: int
+
+    special_tiles: dict[str, tuple[int, int]]
+
     rays: list[tuple[int, int, Direction]]
     visited_positions: set[tuple[int, int, Direction]]
 
@@ -37,7 +34,22 @@ class Contraption:
     def from_map(cls, map_: list[str]) -> Self:
         width = len(map_[0])
         height = len(map_)
-        return cls(width, height, [], set())
+
+        special_tiles = {  # todo SpecialTile enum
+            '\\': set(),
+            '/': set(),
+            '-': set(),
+            '|': set()
+        }
+
+        for row_idx, row in enumerate(map_):
+            for col_idx, val in enumerate(row):
+                for special_tile, positions in special_tiles.items():
+                    if val == special_tile:
+                        positions.add((row_idx, col_idx))
+                        break
+
+        return cls(width, height, special_tiles, [], set())
 
     def add_ray(self, ray: tuple[int, int, Direction]) -> None:
         if ray not in self.visited_positions:
@@ -51,11 +63,18 @@ class Contraption:
             return False
         return True
 
+    def get_tile(self, position: tuple) -> str:
+        for special_tile, positions in self.special_tiles.items():
+            if position[:2] in positions:
+                return special_tile
+        return '.'
+
     def step(self) -> None:
         rays_after_step = []
         print(f'Rays to move: {len(self.rays)}')
         for ray in self.rays:
-            print(f'Moving: {ray}')  # todo ...on field:
+            tile = self.get_tile(ray)
+            print(f'Moving: {ray}, which is on tile: {tile}')
             ray_moved = move(ray)
             print(f'After move: {ray_moved}')
             # If the ray has left the contraption we don't track it anymore
@@ -81,6 +100,8 @@ if __name__ == '__main__':
     print(data)
 
     data = ['.' * 5 for _ in range(5)]
+
+    data[0] = '....\\'
 
     print(data)
 
