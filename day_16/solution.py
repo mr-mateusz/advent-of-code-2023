@@ -129,29 +129,15 @@ class Contraption:
 
     def step(self) -> None:
         rays_after_step = []
-        print(f'Rays to move: {len(self.rays)}')
         for ray in self.rays:
             tile = self.get_tile(ray)
-            print(f'Moving: {ray}, which is on tile: {tile}')
             rays_moved = move(ray, tile)
-            print(f'After move: {rays_moved}')
             # If the ray has left the contraption we don't track it anymore
-            tmp = []
-            for rm in rays_moved:
-                if not self.is_inside(rm):
-                    print(f'*Left contraption: {rm}')  # debug
-                    continue
-                tmp.append(rm)
-            rays_moved = tmp
+            rays_moved = [rm for rm in rays_moved if self.is_inside(rm)]
             # This position is already visited by ray which came from the same direction
             # there is no need to track it anymore, because it will repeat path of the previous ray
-            tmp = []
-            for rm in rays_moved:
-                if rm in self.visited_positions:
-                    print(f'*Position already visited: {rm}')
-                    continue
-                tmp.append(rm)
-            rays_moved = tmp
+            rays_moved = [rm for rm in rays_moved if rm not in self.visited_positions]
+
             rays_after_step.extend(rays_moved)
 
         self.visited_positions.update(rays_after_step)
@@ -173,6 +159,4 @@ if __name__ == '__main__':
     contraption.add_ray(ray)
     contraption.simulate()
 
-    print(contraption.visited_positions)
-    print(contraption.energized_tiles())
     print(len(contraption.energized_tiles()))
