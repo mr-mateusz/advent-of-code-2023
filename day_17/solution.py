@@ -55,7 +55,7 @@ def is_out(node: Node, map_: np.array) -> bool:
 
 def get_adjacent_nodes(map_: np.ndarray, node: Node,
                        direction_min_steps: int, direction_max_steps: int) -> list[NodeWithDistance]:
-    if node.steps_taken < direction_min_steps:
+    if node.steps_taken < direction_min_steps and node.position != (0, 0):
         next_nodes = [node.move(node.direction)]
     else:
         next_nodes = [node.move(d) for d in Direction]
@@ -97,33 +97,55 @@ def find_distance(map_: np.ndarray, initial_node: Node, ending_node_pos: tuple[i
     nodes_dists = {initial_node: 0}
     next_node_candidate = initial_node
     visited_nodes = set()
+    to_visit_candidates = {}
 
-    pbar = tqdm(total=map_.shape[0] * map_.shape[1])
+    pbar = tqdm()
     while next_node_candidate:
         pbar.update(1)
         next_nodes = get_adjacent_nodes(map_, next_node_candidate, direction_min_steps, direction_max_steps)
         current_node_distance = nodes_dists[next_node_candidate]
-        # print(next_node_candidate, current_node_distance)
-        # print(next_nodes)
 
         for n in next_nodes:
             distance_to_node = current_node_distance + n.distance
             try:
+                old_distance = nodes_dists[n.node]
+                new_distance = min(old_distance, distance_to_node)
                 nodes_dists[n.node] = min(nodes_dists[n.node], distance_to_node)
+                #
+                if n.node not in visited_nodes:
+                    to_visit_candidates[old_distance].remove(n.node)
+                    if len(to_visit_candidates[old_distance]) == 0:
+                        del to_visit_candidates[old_distance]
+                    try:
+                        to_visit_candidates[new_distance].add(n.node)
+                    except KeyError:
+                        to_visit_candidates[new_distance] = {n.node}
+                #
             except KeyError:
                 nodes_dists[n.node] = distance_to_node
 
+                #
+                try:
+                    to_visit_candidates[distance_to_node].add(n.node)
+                except KeyError:
+                    to_visit_candidates[distance_to_node] = {n.node}
+                #
+
         visited_nodes.add(next_node_candidate)
+
         try:
-            # todo - find a better way for this
-            next_node_candidate = \
-                min(((k, v) for k, v in nodes_dists.items() if k not in visited_nodes), key=lambda x: x[1])[0]
+            _new_candidate = None
+            while not _new_candidate:
+                min_dist = min(to_visit_candidates.keys())
+                _new_candidate = to_visit_candidates[min_dist].pop()
+                if len(to_visit_candidates[min_dist]) == 0:
+                    del to_visit_candidates[min_dist]
+            next_node_candidate = _new_candidate
         except ValueError:
             next_node_candidate = None
 
-        # print(next_node_candidate)
-
     pbar.close()
+
     # print('Results:')
     # for k, v in nodes_dists.items():
     #     if k.position == ending_node_pos:
@@ -134,17 +156,13 @@ def find_distance(map_: np.ndarray, initial_node: Node, ending_node_pos: tuple[i
 
 
 if __name__ == '__main__':
-    path = 'input2.txt'
+    path = 'input.txt'
 
     data = read(path)
     data = np.array([[int(v) for v in row] for row in data])
 
-    data = data[:20,:20]
-
     initial_node = Node((0, 0), 0, Direction.EAST)
     ending_node_pos = tuple(a - 1 for a in data.shape)
-
-    print(data.shape)
 
     # Part 1
     r = find_distance(data, initial_node, ending_node_pos, 1, 3)
