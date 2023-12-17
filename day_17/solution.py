@@ -53,8 +53,12 @@ def is_out(node: Node, map_: np.array) -> bool:
     return not is_inside
 
 
-def get_adjacent_nodes(map_: np.ndarray, node: Node, direction_max_steps: int) -> list[NodeWithDistance]:
-    next_nodes = [node.move(d) for d in Direction]
+def get_adjacent_nodes(map_: np.ndarray, node: Node,
+                       direction_min_steps: int, direction_max_steps: int) -> list[NodeWithDistance]:
+    if node.steps_taken < direction_min_steps:
+        next_nodes = [node.move(node.direction)]
+    else:
+        next_nodes = [node.move(d) for d in Direction]
 
     # print('Before filter:')
     # for nn in next_nodes:
@@ -89,7 +93,7 @@ def get_adjacent_nodes(map_: np.ndarray, node: Node, direction_max_steps: int) -
 
 
 def find_distance(map_: np.ndarray, initial_node: Node, ending_node_pos: tuple[int, int],
-                  direction_max_steps: int) -> int:
+                  direction_min_steps: int, direction_max_steps: int) -> int:
     nodes_dists = {initial_node: 0}
     next_node_candidate = initial_node
     visited_nodes = set()
@@ -97,7 +101,7 @@ def find_distance(map_: np.ndarray, initial_node: Node, ending_node_pos: tuple[i
     pbar = tqdm(total=map_.shape[0] * map_.shape[1])
     while next_node_candidate:
         pbar.update(1)
-        next_nodes = get_adjacent_nodes(map_, next_node_candidate, direction_max_steps)
+        next_nodes = get_adjacent_nodes(map_, next_node_candidate, direction_min_steps, direction_max_steps)
         current_node_distance = nodes_dists[next_node_candidate]
         # print(next_node_candidate, current_node_distance)
         # print(next_nodes)
@@ -118,13 +122,15 @@ def find_distance(map_: np.ndarray, initial_node: Node, ending_node_pos: tuple[i
             next_node_candidate = None
 
         # print(next_node_candidate)
+
     pbar.close()
     # print('Results:')
     # for k, v in nodes_dists.items():
     #     if k.position == ending_node_pos:
     #         print(k, v)
 
-    return min(v for k, v in nodes_dists.items() if k.position == ending_node_pos)
+    return min(v for k, v in nodes_dists.items() if k.position == ending_node_pos
+               and k.steps_taken >= direction_min_steps)
 
 
 if __name__ == '__main__':
@@ -133,11 +139,17 @@ if __name__ == '__main__':
     data = read(path)
     data = np.array([[int(v) for v in row] for row in data])
 
+    data = data[:20,:20]
+
     initial_node = Node((0, 0), 0, Direction.EAST)
     ending_node_pos = tuple(a - 1 for a in data.shape)
 
     print(data.shape)
 
     # Part 1
-    r = find_distance(data, initial_node, ending_node_pos, 3)
+    r = find_distance(data, initial_node, ending_node_pos, 1, 3)
+    print(r)
+
+    # Part 2
+    r = find_distance(data, initial_node, ending_node_pos, 4, 10)
     print(r)
