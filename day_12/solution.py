@@ -1,150 +1,152 @@
-from __future__ import annotations
-
-from typing import Callable
+from functools import cache
 
 
-def read(path: str) -> list[str]:
-    with open(path, 'r', encoding='utf-8') as f:
-        data = f.readlines()
-    return [l.strip('\n') for l in data]
+# recursive approach with splitting into two parts (split on first dot)
+
+# _ 1,1,3
+# 1  1,3
+# 1,1 3
+# 1,1,3 _
+
+# 1,1,3 3
+# [], [], [1,1,3]
+# [], [1], [1,3]
+# [], [1,1], [3]
+# [], [1,1,3], []
+# [1], [], [1,3]
+# [1], [1], [3]
+# [1], [1, 3], []
+# [1,1], [], [3]
+# [1,1], [3], []
+# [1,1,3], [], []
 
 
-def parse(row: str) -> tuple[str, list[int]]:
-    record, expected_groups = row.split()
-    expected_groups = [int(v) for v in expected_groups.split(',')]
-    return record, expected_groups
+def fill(record_part: str, char: str) -> str:
+    return record_part.replace('?', char, 1)
 
 
-def create_tree(depth: int) -> Node:
-    root = Node()
-
-    last_layer = [root]
-    for _ in range(depth):
-        new_last_layer = []
-        for node in last_layer:
-            nodes = [Node('.'), Node('#')]
-            node.kids = nodes
-            new_last_layer.extend(nodes)
-        last_layer = new_last_layer
-    return root
+def is_ok(record_part: str, values: list[int]) -> bool:
+    return [len(n) for n in record_part.split('.') if n] == list(values)
 
 
-class Node:
-    def __init__(self, value: str | None = None, kids: list[Node] | None = None) -> None:
-        self.value = value
-        self.kids = kids or []
+def is_partial_ok(record_part: str, values: list[int]) -> bool:
+    filled_values = [r for r in record_part.split('.') if r]
+    ff = []
+    last_one = None
+    for f in filled_values:
+        if '?' in f:
+            last_one = f
+            break
+        ff.append(len(f))
 
-    def process(self, already_set: list[str], test_func: Callable) -> int:
-        if not self.value:
-            # print(self.value, self.kids, already_set + [self.value])
-            return sum(k.process(already_set, test_func) for k in self.kids)
-
-        already_set = already_set + [self.value]
-        if not test_func(already_set):
-            # print(self.value, self.kids, already_set, test_func(already_set), 0)
-            return 0
-
-        if not self.kids:
-            # print(self.value, self.kids, already_set, test_func(already_set), 1)
-            return 1
-
-        # print(self.value, self.kids, already_set, test_func(already_set))
-        return sum(k.process(already_set, test_func) for k in self.kids)
-
-
-def fill(record: str, values: list[str]) -> str:
-    filled = []
-    values_iter = iter(values)
-    for char in record:
-        if char == '?':
-            try:
-                filled.append(next(values_iter))
-            except StopIteration:
-                filled.append(char)
-        else:
-            filled.append(char)
-    return ''.join(filled)
-
-
-def count_groups(record: str) -> list[int]:
-    groups = []
-    current_group = 0
-    for char in record:
-        if char == '.' and current_group:
-            groups.append(current_group)
-            current_group = 0
-        if char == '#':
-            current_group += 1
-        if char == '?':
-            if current_group:
-                groups.append(current_group)
-            groups.append(0)  # Temporary solution
-            return groups
-
-    if current_group:
-        groups.append(current_group)
-    return groups
-
-
-def can_create(partial_groups: list[int], expected_groups: list[int]) -> bool:
-    if not partial_groups:
+    if ff != values[:len(ff)]:
         return False
-    if partial_groups == [0]:
+
+    if not last_one:
         return True
 
-    if partial_groups[-1] == 0:
-        last_le = True
-        partial_groups = partial_groups[:-1]
-    else:
-        last_le = False
+    try:
+        to_check = values[len(ff)]
+    except IndexError:
+        return last_one.count('#') == 0
 
-    if len(expected_groups) < len(partial_groups):
-        return False
-
-    if last_le:
-        to_compare = partial_groups[:-1]
-    else:
-        to_compare = partial_groups
-
-    if last_le:
-        for a, b in zip(to_compare, expected_groups):
-            if a != b:
-                return False
-        if partial_groups[-1] > expected_groups[len(partial_groups) - 1]:
-            return False
-    else:
-        return partial_groups == expected_groups
     return True
 
 
-def possible_sequences_cnt(row: str) -> int:
-    record, expected_groups = parse(row)
+def calculate_possible_assignments_in_part(record_part: str, values: list[int]) -> int:
+    values = list(values)
 
-    # print(record)
-    # print(expected_groups)
+    if values == []:
+        if '#' in record_part:
+            return 0
+        else:
+            return 1
 
-    to_fill = record.count('?')
+    if sum(values) + len(values) - 1 > len(record_part):
+        # print('guard')
+        return 0
 
-    # print(to_fill)
+    if '?' not in record_part:
+        if is_ok(record_part, values):
+            return 1
+        else:
+            return 0
 
-    tree = create_tree(to_fill)
-
-    # print(tree)
-
-    def test_func(values: list[str]) -> bool:
-        filled_record = fill(record, values)
-
-        partial_groups = count_groups(filled_record)
-
-        return can_create(partial_groups, expected_groups)
-
-    return tree.process([], test_func)
+    if is_partial_ok(record_part, values):
+        lp = calculate_possible_assignments_in_part(fill(record_part, '#'), values)
+        rp = calculate_possible_assignments_in_part(fill(record_part, '.'), values)
+        return lp + rp
+    return 0
 
 
-if __name__ == '__main__':
-    path = 'input.txt'
+@cache
+def doit(record: str, values: tuple[int]) -> int:
+    values = list(values)
 
-    data = read(path)
+    if values == []:
+        if '#' not in record:
+            return 1
+        return 0
+
+    if '?' not in record:
+        if is_ok(record, values):
+            return 1
+        return 0
+
+    if sum(values) + len(values) - 1 > len(record):
+        return 0
+
+    record = record.strip('.')
+
+    if not is_partial_ok(record, values):
+        return 0
+
+    if '.' not in record:
+        return doit(fill(record, '#'), tuple(values)) + doit(fill(record, '.'), tuple(values))
+    # split
+    left, right = record.split('.', 1)
+    total = 0
+    for i in range(len(values) + 1):
+
+        l = doit(left, tuple(values[:i]))
+        if l == 0:
+            total += 0
+        else:
+            r = doit(right, tuple(values[i:]))
+            total += l * r
+    return total
+
+
+def main():
+    input_file = 'input.txt'
+
+    with open(input_file, 'r') as f:
+        lines = f.readlines()
 
     # Part 1
-    print(sum(possible_sequences_cnt(row) for row in data))
+    total = 0
+    for line in lines[:]:
+        record, values_str = line.split()
+        values = [int(i) for i in values_str.split(',')]
+        possible_arrangements = doit(record, tuple(values))
+        total += possible_arrangements
+
+    print(total)
+
+    # Part 2
+    total = 0
+    for line in lines[:]:
+        record, values_str = line.split()
+        values = [int(i) for i in values_str.split(',')]
+        record += '?'
+        record *= 5
+        record = record[:-1]
+        values *= 5
+        possible_arrangements = doit(record, tuple(values))
+        total += possible_arrangements
+
+    print(total)
+
+
+if __name__ == "__main__":
+    main()
